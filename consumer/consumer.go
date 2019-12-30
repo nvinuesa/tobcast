@@ -1,8 +1,10 @@
-package main
+package consumer
 
 import (
 	"bufio"
 	"fmt"
+	"io"
+	"log"
 	"math/rand"
 	"net"
 	"os"
@@ -11,17 +13,8 @@ import (
 	"time"
 )
 
-func main() {
-	arguments := os.Args
-	if len(arguments) == 1 {
-		fmt.Println("Please provide a port number!")
-		return
-	}
-
-	DESTINATION_PORTS := arguments[2:]
-
-	PORT := ":" + arguments[1]
-	l, err := net.Listen("tcp4", PORT)
+func Listen(port int) {
+	l, err := net.Listen("tcp4", ":"+strconv.Itoa(port))
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -35,29 +28,36 @@ func main() {
 			fmt.Println(err)
 			return
 		}
-		go handleConnection(c)
+		go handleConnection(port, c)
 	}
 }
 
-func handleConnection(c net.Conn) {
-	fmt.Printf("Serving %s\n", c.RemoteAddr().String())
+func handleConnection(port int, c net.Conn) {
+	f, err := os.OpenFile(strconv.Itoa(port)+".log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		panic(err)
+	}
+
+	if _, err = f.WriteString("serving on port "+strconv.Itoa(port)+"\n"); err != nil {
+		panic(err)
+	}
 	for {
 		netData, err := bufio.NewReader(c).ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
+		switch {
+		case err == io.EOF:
+			log.Println("Reached EOF - close this connection.\n   ---")
+			return
+		case err != nil:
+			log.Println("\nError reading command. Got: '"+netData+"'\n", err)
 			return
 		}
 
-		temp := strings.TrimSpace(string(netData))
-		if temp == "STOP" {
-			break
+		temp := strings.TrimSpace(netData)
+		if _, err = f.WriteString(temp+"\n"); err != nil {
+			panic(err)
 		}
-
-		result := strconv.Itoa(rand.Int()) + "\n"
-		fmt.Printf("recv: %s\n", temp)
-		fmt.Printf("send: %s", result)
-		c.Write([]byte(string(result)))
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
-
-func sendTimestam()

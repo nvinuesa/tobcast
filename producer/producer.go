@@ -1,29 +1,42 @@
-package main
+package producer
 
-import "net"
-import "fmt"
-import "bufio"
-import "os"
+import (
+	"encoding/json"
+	"github.com/underscorenico/tobcast/data"
+	"log"
+	"net"
+	"strconv"
+	"time"
+)
 
-func main() {
-	arguments := os.Args
-	if len(arguments) == 1 {
-		fmt.Println("Please provide a port number!")
-		return
+type Producer struct {
+	Ports       []int
+	Connections []net.Conn
+}
+
+func New(ports []int) *Producer {
+	return &Producer{Ports: ports, Connections: []net.Conn{}}
+}
+
+func (p *Producer) Multicast(time time.Time, value interface{}) {
+	if len(p.Connections) == 0 {
+		for _, s := range p.Ports {
+			conn, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(s))
+			if err != nil {
+				log.Println("error connecting on port " + strconv.Itoa(s), err)
+			}
+			p.Connections = append(p.Connections, conn)
+		}
 	}
-
-	PORT := ":" + arguments[1]
-	// connect to this socket
-	conn, _ := net.Dial("tcp", "127.0.0.1"+PORT)
-	for {
-		// read in input from stdin
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("send: ")
-		text, _ := reader.ReadString('\n')
-		// send to socket
-		fmt.Fprintf(conn, text+"\n")
-		// listen for reply
-		message, _ := bufio.NewReader(conn).ReadString('\n')
-		fmt.Print("recv: " + message)
+	for _, c := range p.Connections {
+		message := data.Message{
+			Timestamp: time.UnixNano(),
+			Value:     value,
+		}
+		bytes, err := json.Marshal(message)
+		bytes = append(bytes, '\n')
+		if err == nil {
+			c.Write(bytes)
+		}
 	}
 }
