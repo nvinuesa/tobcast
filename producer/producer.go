@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"strconv"
-	"time"
 )
 
 type Producer struct {
@@ -18,7 +17,7 @@ func New(ports []int) *Producer {
 	return &Producer{Ports: ports, Connections: []net.Conn{}}
 }
 
-func (p *Producer) Multicast(time time.Time, value interface{}) {
+func (p *Producer) Multicast(message data.Message) {
 	if len(p.Connections) == 0 {
 		for _, s := range p.Ports {
 			conn, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(s))
@@ -29,10 +28,7 @@ func (p *Producer) Multicast(time time.Time, value interface{}) {
 		}
 	}
 	for _, c := range p.Connections {
-		message := data.Message{
-			Timestamp: time.UnixNano(),
-			Value:     value,
-		}
+
 		bytes, err := json.Marshal(message)
 		bytes = append(bytes, '\n')
 		if err == nil {

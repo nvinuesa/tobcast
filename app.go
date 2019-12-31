@@ -3,9 +3,9 @@ package main
 import (
 	"github.com/underscorenico/tobcast/consumer"
 	"github.com/underscorenico/tobcast/data"
-	producer "github.com/underscorenico/tobcast/producer"
+	Producer "github.com/underscorenico/tobcast/producer"
+	Timestamps "github.com/underscorenico/tobcast/timestamps"
 	"strconv"
-	"time"
 )
 import "fmt"
 import "bufio"
@@ -23,15 +23,25 @@ func main() {
 		i, _ := strconv.Atoi(s)
 		ports = append(ports, i)
 	}
+	prod := Producer.New(ports)
 
-	prod := producer.New(ports[2:])
+	myPort := ports[1]
+	go consumer.Listen(myPort)
 
-	go consumer.Listen(ports[1])
+	timestamps := Timestamps.New(ports)
+
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("send: ")
 		text, _ := reader.ReadString('\n')
-		prod.Multicast(time.Now(), text)
+
+		timestamps.Incr(myPort)
+		ts := timestamps.Get(myPort)
+		message := data.Message{
+			Timestamp: ts,
+			Value:     text,
+		}
+		prod.Multicast(message)
 	}
 }
 

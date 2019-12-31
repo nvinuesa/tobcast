@@ -3,6 +3,8 @@ package consumer
 import (
 	"bufio"
 	"fmt"
+	"github.com/underscorenico/tobcast/data"
+	"github.com/underscorenico/tobcast/timestamps"
 	"io"
 	"log"
 	"math/rand"
@@ -13,7 +15,7 @@ import (
 	"time"
 )
 
-func Listen(port int) {
+func Listen(port int, timestamps *timestamps.Timestamps) {
 	l, err := net.Listen("tcp4", ":"+strconv.Itoa(port))
 	if err != nil {
 		fmt.Println(err)
@@ -21,6 +23,9 @@ func Listen(port int) {
 	}
 	defer l.Close()
 	rand.Seed(time.Now().Unix())
+
+	var received []data.Message
+	var delivered []data.Message
 
 	for {
 		c, err := l.Accept()
