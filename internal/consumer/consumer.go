@@ -76,10 +76,6 @@ func (consumer *Consumer) handleDeliveredConnection(port int, c net.Conn) {
 		panic(err)
 	}
 
-	if _, err = f.WriteString("serving on port " + strconv.Itoa(port) + "\n"); err != nil {
-		panic(err)
-	}
-
 	for {
 		netData, err := bufio.NewReader(c).ReadString('\n')
 		switch {

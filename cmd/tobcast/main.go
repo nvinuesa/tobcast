@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/underscorenico/tobcast/internal/consumer"
 	"github.com/underscorenico/tobcast/internal/data"
@@ -43,7 +44,8 @@ func main() {
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("send: ")
-		text, _ := reader.ReadString('\n')
+		input, _ := reader.ReadString('\n')
+		text := strings.TrimSuffix(input, "\n")
 		incrementTimestamp <- myPort
 		ts := timestamps.Get(myPort)
 		message := data.Message{

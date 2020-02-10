@@ -2,6 +2,7 @@ package producer
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"strconv"
@@ -53,7 +54,7 @@ func (p *Producer) Deliver(message data.Message) error {
 		}
 	}
 	for _, c := range p.DeliverConnections {
-		log.Println("sending msg")
+		log.Println("delivering msg ", fmt.Sprintf("%v", message))
 
 		bytes, err := json.Marshal(message)
 		bytes = append(bytes, '\n')
