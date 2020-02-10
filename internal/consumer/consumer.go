@@ -29,7 +29,7 @@ func New(ports []int, producer *producer.Producer) *Consumer {
 	return &Consumer{Ports: ports, Connections: []net.Conn{}, producer: producer}
 }
 
-func (consumer *Consumer) ListenBroadcasted(port int, timestamps *timestamps.Timestamps, timestampsChan chan data.Message) {
+func (consumer *Consumer) ListenBroadcasted(port int, timestamps *timestamps.Timestamps, timestampsChan chan data.SenderWithTimestamp) {
 	l, err := net.Listen("tcp4", ":"+strconv.Itoa(port))
 	if err != nil {
 		fmt.Println(err)
@@ -101,7 +101,7 @@ func (consumer *Consumer) handleDeliveredConnection(port int, c net.Conn) {
 	}
 }
 
-func (consumer *Consumer) handleBroadcastConnection(port int, c net.Conn, timestampsChan chan data.Message) {
+func (consumer *Consumer) handleBroadcastConnection(port int, c net.Conn, timestampsChan chan data.SenderWithTimestamp) {
 	for {
 		netData, err := bufio.NewReader(c).ReadString('\n')
 		switch {
@@ -118,10 +118,14 @@ func (consumer *Consumer) handleBroadcastConnection(port int, c net.Conn, timest
 			panic(err)
 		}
 
+		connPort, _ := strconv.Atoi(pp)
 		log.Println("incoming port: " + pp)
 		temp := strings.TrimSpace(netData)
 		var msg data.Message
 		json.Unmarshal([]byte(temp), &msg)
+
+		senderWithTimestamp := data.SenderWithTimestamp{Port: connPort, Timestamp: msg.Timestamp}
+		timestampsChan <- senderWithTimestamp
 		err = consumer.producer.Deliver(msg)
 		if err != nil {
 			log.Fatal(err)

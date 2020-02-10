@@ -10,17 +10,19 @@ import (
 )
 
 type Producer struct {
-	Ports       []int
-	Connections []net.Conn
+	BroadcastPorts     []int
+	DeliverPorts       []int
+	Connections        []net.Conn
+	DeliverConnections []net.Conn
 }
 
-func New(ports []int) *Producer {
-	return &Producer{Ports: ports, Connections: []net.Conn{}}
+func New(broadcastPorts []int, deliverPorts []int) *Producer {
+	return &Producer{BroadcastPorts: broadcastPorts, DeliverPorts: deliverPorts, Connections: []net.Conn{}}
 }
 
 func (p *Producer) Broadcast(message data.Message) {
 	if len(p.Connections) == 0 {
-		for _, s := range p.Ports {
+		for _, s := range p.BroadcastPorts {
 			conn, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(s))
 			if err != nil {
 				log.Println("error connecting on port "+strconv.Itoa(s), err)
@@ -40,16 +42,18 @@ func (p *Producer) Broadcast(message data.Message) {
 }
 
 func (p *Producer) Deliver(message data.Message) error {
-	if len(p.Connections) == 0 {
-		for _, s := range p.Ports {
+	if len(p.DeliverConnections) == 0 {
+		for _, s := range p.DeliverPorts {
+			log.Println("connecting on port " + strconv.Itoa(s))
 			conn, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(s))
 			if err != nil {
 				log.Println("error connecting on port "+strconv.Itoa(s), err)
 			}
-			p.Connections = append(p.Connections, conn)
+			p.DeliverConnections = append(p.DeliverConnections, conn)
 		}
 	}
-	for _, c := range p.Connections {
+	for _, c := range p.DeliverConnections {
+		log.Println("sending msg")
 
 		bytes, err := json.Marshal(message)
 		bytes = append(bytes, '\n')
