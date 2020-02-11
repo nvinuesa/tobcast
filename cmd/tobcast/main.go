@@ -3,10 +3,12 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
-	"strconv"
 	"strings"
 
+	"github.com/spf13/viper"
+	"github.com/underscorenico/tobcast/internal/config"
 	"github.com/underscorenico/tobcast/internal/consumer"
 	"github.com/underscorenico/tobcast/internal/data"
 	"github.com/underscorenico/tobcast/internal/producer"
@@ -14,40 +16,39 @@ import (
 )
 
 func main() {
-	arguments := os.Args[1:]
-	if len(arguments) == 0 {
-		fmt.Println("Please provide a port number!")
-		return
-	}
+	viper.SetConfigName("config")
+	viper.AddConfigPath(".")
+	var config config.Config
 
-	var ports []int
-	for _, s := range arguments {
-		i, _ := strconv.Atoi(s)
-		ports = append(ports, i)
+	if err := viper.ReadInConfig(); err != nil {
+		log.Fatalf("error reading config file, %s", err)
 	}
-	var deliverPorts []int
-	for _, p := range ports {
-		deliverPorts = append(deliverPorts, p+10)
+	err := viper.Unmarshal(&config)
+	if err != nil {
+		log.Fatalf("bad formatted configuration, %v", err)
 	}
-	prod := producer.New(ports, deliverPorts)
+	broadcastPorts := config.Cluster.Broadcast.Ports
+	deliverPorts := config.Cluster.Deliver.Ports
+	prod := producer.New(broadcastPorts, deliverPorts)
 
-	myPort := ports[1]
-	consumer := consumer.New(ports, prod)
+	myDeliverPort := config.Listen.Deliver.Port
+	myBroadcastPort := config.Listen.Broadcast.Port
+	consumer := consumer.New(prod)
 	incrementTimestamp := make(chan int)
 	updateTimestamp := make(chan data.SenderWithTimestamp)
 
-	timestamps := timestamps.New(ports)
+	timestamps := timestamps.New(broadcastPorts)
 	go monitor(timestamps, incrementTimestamp, updateTimestamp)
-	go consumer.ListenBroadcasted(ports[0], timestamps, updateTimestamp)
-	go consumer.ListenDelivered(deliverPorts[0], timestamps)
+	go consumer.ListenBroadcasted(myBroadcastPort, timestamps, updateTimestamp)
+	go consumer.ListenDelivered(myDeliverPort, timestamps)
 
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("send: ")
 		input, _ := reader.ReadString('\n')
 		text := strings.TrimSuffix(input, "\n")
-		incrementTimestamp <- myPort
-		ts := timestamps.Get(myPort)
+		incrementTimestamp <- myDeliverPort
+		ts := timestamps.Get(myDeliverPort)
 		message := data.Message{
 			Timestamp: ts,
 			Value:     text,

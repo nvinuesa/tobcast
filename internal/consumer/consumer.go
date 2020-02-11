@@ -20,13 +20,12 @@ import (
 )
 
 type Consumer struct {
-	Ports       []int
 	Connections []net.Conn
 	producer    *producer.Producer
 }
 
-func New(ports []int, producer *producer.Producer) *Consumer {
-	return &Consumer{Ports: ports, Connections: []net.Conn{}, producer: producer}
+func New(producer *producer.Producer) *Consumer {
+	return &Consumer{Connections: []net.Conn{}, producer: producer}
 }
 
 func (consumer *Consumer) ListenBroadcasted(port int, timestamps *timestamps.Timestamps, timestampsChan chan data.SenderWithTimestamp) {

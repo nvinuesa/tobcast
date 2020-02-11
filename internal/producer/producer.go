@@ -27,8 +27,9 @@ func (p *Producer) Broadcast(message data.Message) {
 			conn, err := net.Dial("tcp", "127.0.0.1:"+strconv.Itoa(s))
 			if err != nil {
 				log.Println("error connecting on port "+strconv.Itoa(s), err)
+			} else {
+				p.Connections = append(p.Connections, conn)
 			}
-			p.Connections = append(p.Connections, conn)
 		}
 	}
 	for _, c := range p.Connections {
@@ -38,6 +39,7 @@ func (p *Producer) Broadcast(message data.Message) {
 		if err != nil {
 			log.Fatal("error marshalling message")
 		}
+		fmt.Println(bytes)
 		c.Write(bytes)
 	}
 }
