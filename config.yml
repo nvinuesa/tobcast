@@ -1,15 +1,6 @@
-
 listen:
-    broadcast:
-        port: 8080
-    deliver:
-        port: 8090
+    port: 8080
 cluster:
     broadcast:
         ports:
-            - 8080
             - 8081
-    deliver:
-        ports:
-            - 8090
-            - 8091
