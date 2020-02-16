@@ -23,7 +23,7 @@ func NewConsumer(port int) *Consumer {
 	return &Consumer{port}
 }
 
-func (c *Consumer) ListenBroadcasted(handler func(message data.Message, sender int)) {
+func (c *Consumer) ListenBroadcasted(handler func(message data.Message)) {
 	l, err := net.Listen("tcp4", ":"+strconv.Itoa(c.port))
 	if err != nil {
 		fmt.Println(err)
@@ -42,7 +42,7 @@ func (c *Consumer) ListenBroadcasted(handler func(message data.Message, sender i
 	}
 }
 
-func (consumer *Consumer) handleBroadcastConnection(c net.Conn, handler func(message data.Message, sender int)) {
+func (consumer *Consumer) handleBroadcastConnection(c net.Conn, handler func(message data.Message)) {
 	for {
 		netData, err := bufio.NewReader(c).ReadString('\n')
 		switch {
@@ -54,17 +54,10 @@ func (consumer *Consumer) handleBroadcastConnection(c net.Conn, handler func(mes
 			return
 		}
 
-		_, pp, err := net.SplitHostPort(c.RemoteAddr().String())
-		if err != nil {
-			panic(err)
-		}
-
-		sender, _ := strconv.Atoi(pp)
-
 		temp := strings.TrimSpace(netData)
 		var msg data.Message
 		json.Unmarshal([]byte(temp), &msg)
 
-		handler(msg, sender)
+		handler(msg)
 	}
 }

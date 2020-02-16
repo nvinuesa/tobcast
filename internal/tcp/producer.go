@@ -20,9 +20,9 @@ func NewProducer(broadcastPorts []int) *Producer {
 }
 
 func (p *Producer) Broadcast(message data.Message) error {
+	log.Println("broadcasting message '{}'", fmt.Sprintf("%v", message))
 	p.connectBroacast()
 	for _, c := range p.connections {
-		log.Println("broadcasting msg '{}'", fmt.Sprintf("%v", message))
 
 		bytes, err := getBytes(message)
 		if err != nil {

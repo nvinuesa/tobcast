@@ -1,6 +1,7 @@
 listen:
-    port: 8080
+    port: 8081
 cluster:
     broadcast:
         ports:
+            - 8080
             - 8081

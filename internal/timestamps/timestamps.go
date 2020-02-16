@@ -1,7 +1,6 @@
 package timestamps
 
 import (
-	"math"
 	"sync"
 )
 
@@ -13,7 +12,7 @@ type Timestamps struct {
 func New(ports []int) *Timestamps {
 	init := make(map[int]int64)
 	for _, port := range ports {
-		init[port] = math.MaxInt64
+		init[port] = 0
 	}
 	return &Timestamps{times: init}
 }
@@ -44,7 +43,7 @@ func (t *Timestamps) IncrOrSet(port int, timestamp int64) {
 	if timestamp > t.times[port] {
 		t.times[port] = timestamp + 1
 	} else {
-		t.Incr(port)
+		t.times[port] = t.times[port] + 1
 	}
 	t.mux.Unlock()
 }

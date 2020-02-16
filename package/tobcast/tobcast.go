@@ -48,6 +48,7 @@ func (p *Tobcast) Multicast(text interface{}) error {
 	message := data.Message{
 		Timestamp: ts,
 		Value:     text,
+		Sender:    myPort,
 	}
 	p.producer.Broadcast(message)
 
@@ -55,10 +56,10 @@ func (p *Tobcast) Multicast(text interface{}) error {
 	return nil
 }
 
-func (p *Tobcast) handler(message data.Message, sender int) {
-	log.Println("received msg from sender " + strconv.Itoa(sender))
+func (p *Tobcast) handler(message data.Message) {
+	log.Println("received msg from sender " + strconv.Itoa(message.Sender))
 	p.timestamps.IncrOrSet(p.config.Listen.Port, message.Timestamp)
-	p.timestamps.Set(sender, message.Timestamp)
+	p.timestamps.Set(message.Sender, message.Timestamp)
 
 	p.received = append(p.received, message)
 
