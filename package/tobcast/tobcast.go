@@ -38,7 +38,7 @@ func New(config *config.Config) *Tobcast {
 
 	instance := &Tobcast{producer, timestamps, consumer, f, config, []data.Message{}, []data.Message{}}
 
-	go consumer.ListenBroadcasted(instance.handler)
+	go consumer.Register(instance.handler)
 	return instance
 }
 

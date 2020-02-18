@@ -6,34 +6,26 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"net"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/underscorenico/tobcast/internal/data"
 )
 
 type Consumer struct {
-	port int
+	port     int
+	listener net.Listener
 }
 
 func NewConsumer(port int) *Consumer {
-	return &Consumer{port}
+	listener := createListener(port)
+	return &Consumer{port, listener}
 }
 
-func (c *Consumer) ListenBroadcasted(handler func(message data.Message)) {
-	l, err := net.Listen("tcp4", ":"+strconv.Itoa(c.port))
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer l.Close()
-	rand.Seed(time.Now().Unix())
-
+func (c *Consumer) Register(handler func(message data.Message)) {
 	for {
-		conn, err := l.Accept()
+		conn, err := c.listener.Accept()
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -42,22 +34,34 @@ func (c *Consumer) ListenBroadcasted(handler func(message data.Message)) {
 	}
 }
 
-func (consumer *Consumer) handleBroadcastConnection(c net.Conn, handler func(message data.Message)) {
-	for {
-		netData, err := bufio.NewReader(c).ReadString('\n')
-		switch {
-		case err == io.EOF:
-			log.Println("Reached EOF - close this connection.\n   ---")
-			return
-		case err != nil:
-			log.Println("\nError reading command. Got: '"+netData+"'\n", err)
-			return
-		}
-
-		temp := strings.TrimSpace(netData)
-		var msg data.Message
-		json.Unmarshal([]byte(temp), &msg)
-
-		handler(msg)
+func createListener(port int) net.Listener {
+	l, err := net.Listen("tcp4", ":"+strconv.Itoa(port))
+	if err != nil {
+		panic(err)
 	}
+	// defer l.Close()
+	return l
+}
+
+func (c *Consumer) handleBroadcastConnection(conn net.Conn, handler func(message data.Message)) {
+	for {
+		netData, err := bufio.NewReader(conn).ReadString('\n')
+		go c.handleMessage(netData, err, handler)
+	}
+}
+
+func (c *Consumer) handleMessage(netData string, err error, handler func(message data.Message)) {
+	switch {
+	case err == io.EOF:
+		log.Println("reached EOF - close this connection.\n   ---")
+		return
+	case err != nil:
+		log.Println("error reading message, got '"+netData+"'\n", err)
+		return
+	}
+	temp := strings.TrimSpace(netData)
+	var msg data.Message
+	json.Unmarshal([]byte(temp), &msg)
+
+	handler(msg)
 }
