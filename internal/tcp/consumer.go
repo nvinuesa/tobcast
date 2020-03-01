@@ -3,12 +3,13 @@ package tcp
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/underscorenico/tobcast/internal/data"
 )
@@ -16,22 +17,12 @@ import (
 type Consumer struct {
 	port     int
 	listener net.Listener
+	quit     chan interface{}
+	wg       sync.WaitGroup
 }
 
 func NewConsumer(port int) *Consumer {
-	listener := createListener(port)
-	return &Consumer{port, listener}
-}
-
-func (c *Consumer) Register(handler func(message data.Message)) {
-	for {
-		conn, err := c.listener.Accept()
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		go c.handleBroadcastConnection(conn, handler)
-	}
+	return &Consumer{port: port, quit: make(chan interface{})}
 }
 
 func createListener(port int) net.Listener {
@@ -39,29 +30,72 @@ func createListener(port int) net.Listener {
 	if err != nil {
 		panic(err)
 	}
-	// defer l.Close()
 	return l
 }
 
-func (c *Consumer) handleBroadcastConnection(conn net.Conn, handler func(message data.Message)) {
-	for {
-		netData, err := bufio.NewReader(conn).ReadString('\n')
-		go c.handleMessage(netData, err, handler)
-	}
+func (c *Consumer) Stop() {
+	log.Println("closing tcp listener")
+	close(c.quit)
+	c.listener.Close()
+	c.wg.Wait()
 }
 
-func (c *Consumer) handleMessage(netData string, err error, handler func(message data.Message)) {
-	switch {
-	case err == io.EOF:
-		log.Println("reached EOF - close this connection.\n   ---")
-		return
-	case err != nil:
-		log.Println("error reading message, got '"+netData+"'\n", err)
-		return
-	}
-	temp := strings.TrimSpace(netData)
-	var msg data.Message
-	json.Unmarshal([]byte(temp), &msg)
+func (c *Consumer) Start(handler func(message data.Message)) {
 
-	handler(msg)
+	if c.listener != nil {
+		panic("tcp consumer already started")
+	}
+	c.listener = createListener(c.port)
+	c.wg.Add(1)
+	go func() {
+		defer c.wg.Done()
+
+		for {
+			select {
+			case <-c.quit:
+				return
+			default:
+				conn, err := c.listener.Accept()
+				if err != nil {
+					select {
+					case <-c.quit:
+						return
+					default:
+						log.Println("accept error", err)
+					}
+				}
+				c.wg.Add(1)
+				go c.handleBroadcastConnection(conn, handler)
+				c.wg.Done()
+			}
+		}
+	}()
+}
+
+func (c *Consumer) handleBroadcastConnection(conn net.Conn, handler func(message data.Message)) {
+	defer conn.Close()
+
+ReadLoop:
+	for {
+		select {
+		case <-c.quit:
+			return
+		default:
+			conn.SetDeadline(time.Now().Add(200 * time.Millisecond))
+			netData, err := bufio.NewReader(conn).ReadString('\n')
+			if err != nil {
+				if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+					continue ReadLoop
+				} else if err != io.EOF {
+					log.Println("read error", err)
+					return
+				}
+			}
+			temp := strings.TrimSpace(netData)
+			var msg data.Message
+			json.Unmarshal([]byte(temp), &msg)
+
+			handler(msg)
+		}
+	}
 }

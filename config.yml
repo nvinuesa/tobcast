@@ -5,3 +5,4 @@ cluster:
         ports:
             - 8080
             - 8081
+keepAliveFreq: "1000ms"

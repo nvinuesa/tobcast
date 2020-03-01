@@ -2,8 +2,8 @@ package tcp
 
 import (
 	"fmt"
+	"log"
 	"net"
-	"os"
 	"strconv"
 	"testing"
 
@@ -15,21 +15,20 @@ const (
 	testPort = 8080
 )
 
-var cons *Consumer
-
-func TestMain(m *testing.M) {
-	cons = NewConsumer(testPort)
-	retCode := m.Run()
-	os.Exit(retCode)
-}
-
 func TestAcceptIncoming(t *testing.T) {
-	// Given / When	/ Then
-	conn, err := net.Dial("tcp", ":"+strconv.Itoa(testPort))
+	// Given
+	consumer := NewConsumer(testPort)
+
+	// When	/ Then
+	consumer.Start(func(message data.Message) {})
+	_, err := net.Dial("tcp", ":"+strconv.Itoa(testPort))
 	if err != nil {
 		t.Error("could not connect to server: ", err)
 	}
-	defer conn.Close()
+	// conn.Close()
+	consumer.Stop()
+	log.Println("end")
+	// time.Sleep(1 * time.Second)
 }
 
 func TestCallHandlerOnMsg(t *testing.T) {
@@ -40,9 +39,10 @@ func TestCallHandlerOnMsg(t *testing.T) {
 		counter <- 1
 	}
 	cnt := 0
+	consumer := NewConsumer(testPort)
 
 	// When
-	go cons.Register(handler)
+	consumer.Start(handler)
 	conn, err := net.Dial("tcp", ":"+strconv.Itoa(testPort))
 	if err != nil {
 		t.Error("could not connect to server: ", err)
@@ -54,5 +54,7 @@ func TestCallHandlerOnMsg(t *testing.T) {
 
 	// Then
 	assert.Equal(t, cnt, 2)
+	consumer.Stop()
 	conn.Close()
+	log.Println("end")
 }
