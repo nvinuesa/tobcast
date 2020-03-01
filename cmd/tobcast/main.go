@@ -9,8 +9,8 @@ import (
 	"syscall"
 
 	"github.com/spf13/viper"
-	"github.com/underscorenico/tobcast/package/config"
-	"github.com/underscorenico/tobcast/package/tobcast"
+	"github.com/underscorenico/tobcast/pkg/config"
+	"github.com/underscorenico/tobcast/pkg/tobcast"
 )
 
 func main() {

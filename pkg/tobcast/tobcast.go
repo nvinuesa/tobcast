@@ -12,7 +12,7 @@ import (
 	"github.com/underscorenico/tobcast/internal/data"
 	"github.com/underscorenico/tobcast/internal/tcp"
 	"github.com/underscorenico/tobcast/internal/timestamps"
-	"github.com/underscorenico/tobcast/package/config"
+	"github.com/underscorenico/tobcast/pkg/config"
 )
 
 type Tobcast struct {
