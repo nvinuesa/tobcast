@@ -2,7 +2,6 @@ package tcp
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 	"testing"
@@ -25,10 +24,7 @@ func TestAcceptIncoming(t *testing.T) {
 	if err != nil {
 		t.Error("could not connect to server: ", err)
 	}
-	// conn.Close()
 	consumer.Stop()
-	log.Println("end")
-	// time.Sleep(1 * time.Second)
 }
 
 func TestCallHandlerOnMsg(t *testing.T) {
@@ -56,5 +52,4 @@ func TestCallHandlerOnMsg(t *testing.T) {
 	assert.Equal(t, cnt, 2)
 	consumer.Stop()
 	conn.Close()
-	log.Println("end")
 }
