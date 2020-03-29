@@ -41,7 +41,7 @@ func New(config *config.Config) *Tobcast {
 
 	f, err := os.OpenFile(strconv.Itoa(config.Listen.Port)+".log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
-		panic(err)
+		log.Fatalln("error opening delivered messages file '"+strconv.Itoa(config.Listen.Port)+".log'", err)
 	}
 
 	instance := &Tobcast{producer, timestamps, consumer, f, config, []data.Message{}, []data.Message{}, keepAliveFreq}
@@ -109,10 +109,10 @@ func (p *Tobcast) deliver(deliverable []data.Message) {
 		if message.Value != "" {
 			bytes, err := json.Marshal(message)
 			if err != nil {
-				panic(err)
+				log.Fatalln("error decoding received message", err)
 			}
 			if _, err = p.deliverFile.WriteString(string(bytes) + "\n"); err != nil {
-				panic(err)
+				log.Fatalln("error writing message to the delivered message file", err)
 			}
 		}
 	}

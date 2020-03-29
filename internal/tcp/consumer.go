@@ -28,7 +28,7 @@ func NewConsumer(port int) *Consumer {
 func createListener(port int) net.Listener {
 	l, err := net.Listen("tcp4", ":"+strconv.Itoa(port))
 	if err != nil {
-		panic(err)
+		log.Fatalln("error opening tcp connection", err)
 	}
 	return l
 }
